@@ -1,0 +1,163 @@
+# ========================================
+# Starship Prompt Configuration
+# ========================================
+
+format = """
+[╭─](bold green)$username$hostname$directory$git_branch$git_status$git_commit
+[╰─](bold green)$character"""
+
+right_format = """$cmd_duration$nodejs$python$rust$golang$java$docker_context"""
+
+# Timeout for commands
+command_timeout = 500
+
+# ====== Prompt Character ======
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[✗](bold red)"
+vicmd_symbol = "[V](bold green)"
+
+# ====== Directory ======
+[directory]
+style = "bold cyan"
+truncation_length = 3
+truncate_to_repo = true
+truncation_symbol = "…/"
+format = "[$path]($style)[$read_only]($read_only_style) "
+
+[directory.substitutions]
+"Documents" = "󰈙 "
+"Downloads" = " "
+"Music" = " "
+"Pictures" = " "
+"Desktop" = " "
+
+# ====== Git ======
+[git_branch]
+symbol = " "
+style = "bold purple"
+format = "on [$symbol$branch]($style) "
+
+[git_status]
+style = "bold yellow"
+format = "([$all_status$ahead_behind]($style) )"
+conflicted = "⚔️ "
+ahead = "⇡${count}"
+behind = "⇣${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+untracked = "?${count}"
+stashed = "📦"
+modified = "!${count}"
+staged = "+${count}"
+renamed = "»${count}"
+deleted = "✘${count}"
+
+[git_commit]
+tag_symbol = " 🏷  "
+tag_disabled = false
+
+# ====== Username & Hostname ======
+[username]
+style_user = "bold yellow"
+style_root = "bold red"
+format = "[$user]($style) "
+disabled = false
+show_always = false
+
+[hostname]
+ssh_only = true
+format = "on [$hostname](bold blue) "
+disabled = false
+
+# ====== Command Duration ======
+[cmd_duration]
+min_time = 500
+format = "took [$duration](bold yellow) "
+show_milliseconds = false
+
+# ====== Languages ======
+[nodejs]
+symbol = " "
+style = "bold green"
+format = "[$symbol($version )]($style)"
+
+[python]
+symbol = " "
+style = "bold yellow"
+format = '[${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style)'
+
+[rust]
+symbol = " "
+style = "bold red"
+format = "[$symbol($version )]($style)"
+
+[golang]
+symbol = " "
+style = "bold cyan"
+format = "[$symbol($version )]($style)"
+
+[java]
+symbol = " "
+style = "bold red"
+format = "[$symbol($version )]($style)"
+
+[docker_context]
+symbol = " "
+style = "bold blue"
+format = "[$symbol$context ]($style)"
+only_with_files = true
+
+# ====== Tools ======
+[package]
+symbol = "📦 "
+style = "bold 208"
+format = "[$symbol$version]($style) "
+disabled = false
+
+[npm]
+symbol = " "
+style = "bold red"
+format = "[$symbol($version )]($style)"
+
+[terraform]
+symbol = "💠 "
+format = "[$symbol$workspace]($style) "
+
+# ====== Cloud ======
+[aws]
+symbol = "☁️  "
+format = '[$symbol($profile )(\($region\) )]($style)'
+style = "bold yellow"
+
+# ====== Time ======
+[time]
+disabled = true
+format = '🕙[\[ $time \]]($style) '
+time_format = "%T"
+style = "bold white"
+
+# ====== Battery ======
+[battery]
+full_symbol = "🔋"
+charging_symbol = "⚡️"
+discharging_symbol = "💀"
+disabled = true
+
+[[battery.display]]
+threshold = 10
+style = "bold red"
+
+[[battery.display]]
+threshold = 30
+style = "bold yellow"
+
+# ====== Status ======
+[status]
+style = "bold red"
+symbol = "🔴"
+format = '[\[$symbol $status\]]($style) '
+disabled = false
+
+# ====== Line Break ======
+[line_break]
+disabled = false
