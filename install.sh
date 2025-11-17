@@ -342,15 +342,71 @@ EOF
                 print_info "Detected desktop: $XDG_CURRENT_DESKTOP"
             fi
 
-            # Check for common WMs
-            if command_exists i3; then
+            # Check for Hyprland
+            if command_exists hyprctl || [ "$XDG_CURRENT_DESKTOP" = "Hyprland" ]; then
+                print_info "Hyprland detected!"
+                echo ""
+                read -p "Do you want to set up dropdown terminal for Hyprland? [y/N] " -n 1 -r
+                echo ""
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    # Create Hyprland config directory
+                    mkdir -p "$HOME/.config/hyprland/scripts"
+
+                    # Copy dropdown config
+                    if [ ! -f "$HOME/.config/hyprland/dropdown.conf" ]; then
+                        create_symlink "$DOTFILES_DIR/.config/hyprland/dropdown.conf" "$HOME/.config/hyprland/dropdown.conf"
+                        print_success "Created Hyprland dropdown config"
+                    else
+                        print_info "Hyprland dropdown config already exists"
+                    fi
+
+                    # Copy toggle script
+                    if [ ! -f "$HOME/.config/hyprland/scripts/toggle_dropdown.sh" ]; then
+                        cp "$DOTFILES_DIR/scripts/toggle_dropdown_hyprland.sh" "$HOME/.config/hyprland/scripts/toggle_dropdown.sh"
+                        chmod +x "$HOME/.config/hyprland/scripts/toggle_dropdown.sh"
+                        print_success "Created toggle script"
+                    fi
+
+                    # Check if source line exists in hyprland.conf
+                    if [ -f "$HOME/.config/hypr/hyprland.conf" ]; then
+                        if ! grep -q "source.*hyprland/dropdown.conf" "$HOME/.config/hypr/hyprland.conf"; then
+                            echo "" >> "$HOME/.config/hypr/hyprland.conf"
+                            echo "# Dropdown terminal configuration" >> "$HOME/.config/hypr/hyprland.conf"
+                            echo "source = ~/.config/hyprland/dropdown.conf" >> "$HOME/.config/hypr/hyprland.conf"
+                            print_success "Added dropdown config to hyprland.conf"
+                        else
+                            print_info "Dropdown config already sourced in hyprland.conf"
+                        fi
+
+                        # Reload Hyprland config
+                        print_info "Reloading Hyprland config..."
+                        hyprctl reload 2>/dev/null || print_warning "Could not reload Hyprland (not running?)"
+                    else
+                        print_warning "hyprland.conf not found at ~/.config/hypr/hyprland.conf"
+                        print_info "Add this line to your config: source = ~/.config/hyprland/dropdown.conf"
+                    fi
+
+                    echo ""
+                    print_success "Hyprland dropdown terminal setup completed!"
+                    print_info "Hotkey: Super+` (grave key)"
+                    print_info "Full documentation: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
+                else
+                    print_info "Skipping Hyprland dropdown setup"
+                fi
+
+            # Check for i3
+            elif command_exists i3; then
                 print_info "i3 detected. Add to ~/.config/i3/config:"
                 echo "  bindsym \$mod+grave exec wezterm start --class dropdown"
                 echo "  for_window [class=\"dropdown\"] floating enable, resize set 100ppt 50ppt, move position 0 0"
+
+            # Check for Sway
             elif command_exists sway; then
                 print_info "Sway detected. Add to ~/.config/sway/config:"
                 echo "  bindsym \$mod+grave exec wezterm start --class dropdown"
                 echo "  for_window [app_id=\"dropdown\"] floating enable, resize set 100ppt 50ppt, move position 0 0"
+
+            # Other WMs
             else
                 print_info "For other window managers, see: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
             fi

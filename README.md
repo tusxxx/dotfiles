@@ -12,6 +12,7 @@ Personal configuration files for macOS and Linux development environments.
 
 - **macOS** - Full support with Homebrew
 - **Linux** - Ubuntu, Debian, Fedora, RHEL, Arch, Manjaro
+  - **Window Managers**: Hyprland, i3, Sway (dropdown terminal support)
 - **Windows** - Limited support (manual installation required)
 
 ## Requirements
@@ -150,16 +151,19 @@ source ~/.zshrc  # reload shell config
 ```
 dotfiles/
 ├── .config/
-│   └── starship.toml           # Starship prompt config
+│   ├── hyprland/
+│   │   └── dropdown.conf              # Hyprland dropdown config
+│   └── starship.toml                  # Starship prompt config
 ├── docs/
-│   └── DROPDOWN_TERMINAL.md    # Dropdown terminal setup guide
+│   └── DROPDOWN_TERMINAL.md           # Dropdown terminal setup guide
 ├── scripts/
-│   └── toggle_dropdown.sh      # macOS dropdown toggle script
-├── .wezterm.lua                # WezTerm terminal config
-├── .zshrc                      # Zsh shell config
-├── install.sh                  # Automated installation script
-├── CLAUDE.md                   # Claude AI project guidelines
-└── README.md                   # This file
+│   ├── toggle_dropdown.sh             # macOS dropdown toggle script
+│   └── toggle_dropdown_hyprland.sh    # Hyprland dropdown toggle script
+├── .wezterm.lua                       # WezTerm terminal config
+├── .zshrc                             # Zsh shell config
+├── install.sh                         # Automated installation script
+├── CLAUDE.md                          # Claude AI project guidelines
+└── README.md                          # This file
 ```
 
 ## Advanced Features
@@ -185,7 +189,23 @@ WezTerm can be configured as a dropdown terminal that appears on half-screen wit
 
 3. See detailed guide: [docs/DROPDOWN_TERMINAL.md](docs/DROPDOWN_TERMINAL.md)
 
-**Linux Setup (i3/sway):**
+**Linux Setup:**
+
+**Hyprland:**
+```bash
+# Automated setup
+./install.sh  # Choose 'y' when prompted for dropdown setup
+
+# Manual setup
+cp ~/dotfiles/.config/hyprland/dropdown.conf ~/.config/hyprland/
+cp ~/dotfiles/scripts/toggle_dropdown_hyprland.sh ~/.config/hyprland/scripts/
+echo "source = ~/.config/hyprland/dropdown.conf" >> ~/.config/hypr/hyprland.conf
+hyprctl reload
+
+# Hotkey: Super+` (grave)
+```
+
+**i3/Sway:**
 ```
 bindsym $mod+grave exec wezterm start --class dropdown
 for_window [app_id="dropdown"] floating enable, resize set 100ppt 50ppt

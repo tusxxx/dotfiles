@@ -105,6 +105,84 @@ bindsym $mod+grave exec wezterm start --class dropdown
 for_window [app_id="dropdown"] floating enable, resize set 100ppt 50ppt, move position 0 0
 ```
 
+### Hyprland
+
+**Способ 1: С использованием special workspace (Рекомендуется)**
+
+1. **Создайте скрипт** `~/.config/hyprland/scripts/toggle_dropdown.sh`:
+   ```bash
+   #!/bin/bash
+   CLASS="dropdown"
+
+   if hyprctl clients | grep -q "class: $CLASS"; then
+       hyprctl dispatch togglespecialworkspace dropdown
+   else
+       WEZTERM_CLASS=$CLASS wezterm start &
+       sleep 0.2
+       hyprctl dispatch movetoworkspacesilent special:dropdown,class:^($CLASS)$
+       hyprctl dispatch togglespecialworkspace dropdown
+   fi
+   ```
+
+2. **Сделайте исполняемым:**
+   ```bash
+   chmod +x ~/.config/hyprland/scripts/toggle_dropdown.sh
+   ```
+
+3. **Добавьте в** `~/.config/hypr/hyprland.conf`:
+   ```
+   # Window rules для dropdown
+   windowrulev2 = float, class:^(dropdown)$
+   windowrulev2 = size 100% 50%, class:^(dropdown)$
+   windowrulev2 = move 0 0, class:^(dropdown)$
+   windowrulev2 = workspace special:dropdown silent, class:^(dropdown)$
+   windowrulev2 = opacity 0.90, class:^(dropdown)$
+
+   # Настройка special workspace
+   workspace = special:dropdown, gapsout:0, gapsin:0
+
+   # Keybinding (Super + `)
+   bind = SUPER, grave, exec, ~/.config/hyprland/scripts/toggle_dropdown.sh
+   ```
+
+4. **Или используйте готовый конфиг:**
+   ```bash
+   # Скопируйте конфиг
+   cp ~/dotfiles/.config/hyprland/dropdown.conf ~/.config/hyprland/
+   cp ~/dotfiles/scripts/toggle_dropdown_hyprland.sh ~/.config/hyprland/scripts/
+
+   # Добавьте в hyprland.conf
+   echo "source = ~/.config/hyprland/dropdown.conf" >> ~/.config/hypr/hyprland.conf
+
+   # Перезагрузите конфиг
+   hyprctl reload
+   ```
+
+**Способ 2: Простой вариант без special workspace**
+
+Добавьте в `~/.config/hypr/hyprland.conf`:
+```
+# Window rules
+windowrulev2 = float, class:^(dropdown)$
+windowrulev2 = size 100% 50%, class:^(dropdown)$
+windowrulev2 = move 0 0, class:^(dropdown)$
+
+# Keybinding
+bind = SUPER, grave, exec, WEZTERM_CLASS=dropdown wezterm start
+```
+
+**Опциональные настройки:**
+```
+# Убрать borders
+windowrulev2 = noborder, class:^(dropdown)$
+
+# Убрать rounded corners
+windowrulev2 = norounding, class:^(dropdown)$
+
+# Анимация slide
+windowrulev2 = animation slide, class:^(dropdown)$
+```
+
 ### GNOME / KDE
 
 Используйте расширения:
@@ -178,6 +256,22 @@ end
 **Горячая клавиша не срабатывает:**
 - Проверьте конфликты с другими приложениями
 - Используйте другую комбинацию клавиш
+
+## Сравнение методов
+
+| Метод | Плюсы | Минусы |
+|-------|-------|--------|
+| **macOS (Hammerspoon)** | Полный контроль, автоматическое позиционирование | Требует Hammerspoon |
+| **Hyprland** | Special workspace, smooth animations, native integration | Только для Hyprland |
+| **i3/Sway** | Простая настройка, стабильная работа | Базовая функциональность |
+| **Generic Linux** | Работает везде | Требует wmctrl, может глючить |
+
+### Рекомендации по выбору
+
+- **macOS** → Hammerspoon (лучший UX)
+- **Hyprland** → Special workspace метод (красиво и функционально)
+- **i3/Sway** → Встроенные window rules (просто и надежно)
+- **GNOME/KDE** → Yakuake или Guake (специализированные решения)
 
 ## Альтернативы
 
