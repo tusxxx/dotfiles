@@ -393,6 +393,58 @@ end
 config.pane_focus_follows_mouse = true
 
 -- ============================================================================
+-- [9] QUAKE-MODE / DROPDOWN TERMINAL
+-- ============================================================================
+-- Настройки для dropdown терминала (открытие по горячей клавише)
+--
+-- ДЛЯ MACOS:
+-- 1. Создайте Automator скрипт:
+--    - Откройте Automator → New Document → Quick Action
+--    - Добавьте "Run Shell Script"
+--    - Вставьте: open -a WezTerm --args start --class dropdown
+--    - Сохраните как "Toggle WezTerm Dropdown"
+-- 2. System Settings → Keyboard → Keyboard Shortcuts → Services
+--    - Найдите "Toggle WezTerm Dropdown"
+--    - Назначьте горячую клавишу (например, Cmd+Shift+Space)
+--
+-- ДЛЯ LINUX (i3/sway):
+-- bindsym $mod+grave exec wezterm start --class dropdown
+-- for_window [app_id="dropdown"] floating enable, resize set 100ppt 50ppt, move position 0 0
+--
+-- РЕДАКТИРОВАНИЕ: Раскомментируйте для использования dropdown режима
+
+-- Определяем, запущен ли терминал в dropdown режиме
+local function is_dropdown_mode()
+  -- Проверяем, передан ли класс окна "dropdown" при запуске
+  -- Запуск: wezterm start --class dropdown
+  return os.getenv("WEZTERM_CLASS") == "dropdown"
+end
+
+-- Настройки для dropdown режима
+if is_dropdown_mode() then
+  -- Размер окна (50% высоты экрана, 100% ширины)
+  config.initial_cols = 200
+  config.initial_rows = 25
+
+  -- Убираем декорации окна для dropdown стиля
+  config.window_decorations = "RESIZE"
+
+  -- Прозрачность для dropdown терминала
+  config.window_background_opacity = 0.90
+
+  -- Скрываем таббар в dropdown режиме
+  config.hide_tab_bar_if_only_one_tab = true
+
+  -- Позиционирование (только для некоторых WM)
+  config.window_padding = {
+    left = 4,
+    right = 4,
+    top = 4,
+    bottom = 4,
+  }
+end
+
+-- ============================================================================
 -- ВОЗВРАТ КОНФИГУРАЦИИ
 -- ============================================================================
 

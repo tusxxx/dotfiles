@@ -239,6 +239,183 @@ link_configs() {
     print_success "Configuration files linked"
 }
 
+# ====== Dropdown Terminal Setup ======
+
+setup_dropdown_terminal() {
+    print_info "Setting up dropdown terminal (optional)..."
+
+    case "$OS" in
+        macos)
+            echo ""
+            read -p "Do you want to set up dropdown terminal (Quake-mode)? [y/N] " -n 1 -r
+            echo ""
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                # Install Hammerspoon if not installed
+                if ! brew list --cask hammerspoon &>/dev/null; then
+                    print_info "Installing Hammerspoon for dropdown terminal support..."
+                    brew install --cask hammerspoon
+                fi
+
+                # Create Hammerspoon config directory
+                mkdir -p "$HOME/.hammerspoon"
+
+                # Create or append to Hammerspoon config
+                if [ ! -f "$HOME/.hammerspoon/init.lua" ]; then
+                    print_info "Creating Hammerspoon configuration..."
+                    cat > "$HOME/.hammerspoon/init.lua" <<'EOF'
+-- ========================================
+-- Hammerspoon Configuration
+-- ========================================
+
+-- Dropdown WezTerm Terminal
+local wezterm = nil
+local weztermBundleID = "com.github.wez.wezterm"
+
+-- Hotkey: Cmd+Shift+Space
+hs.hotkey.bind({"cmd", "shift"}, "space", function()
+    if wezterm == nil or not wezterm:isRunning() then
+        -- Launch WezTerm in dropdown mode
+        wezterm = hs.application.open(weztermBundleID, 1, true)
+        hs.timer.doAfter(0.3, function()
+            local win = wezterm:mainWindow()
+            if win then
+                local screen = hs.screen.mainScreen()
+                local frame = screen:frame()
+                -- Position: full width, 50% height, top of screen
+                win:setFrame({
+                    x = frame.x,
+                    y = frame.y,
+                    w = frame.w,
+                    h = frame.h * 0.5
+                })
+            end
+        end)
+    else
+        local win = wezterm:mainWindow()
+        if win and win:isVisible() then
+            -- Hide
+            wezterm:hide()
+        else
+            -- Show and focus
+            wezterm:activate()
+            local win = wezterm:mainWindow()
+            if win then
+                win:focus()
+            end
+        end
+    end
+end)
+
+-- Auto-reload config on changes
+hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", function(files)
+    hs.reload()
+end):start()
+
+hs.alert.show("Hammerspoon Config Loaded")
+EOF
+                    print_success "Hammerspoon config created at ~/.hammerspoon/init.lua"
+                else
+                    print_info "Hammerspoon config already exists at ~/.hammerspoon/init.lua"
+                    print_info "Add dropdown terminal config from: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
+                fi
+
+                # Open Hammerspoon
+                print_info "Opening Hammerspoon..."
+                open -a Hammerspoon
+
+                echo ""
+                print_success "Dropdown terminal setup completed!"
+                print_info "Hotkey: Cmd+Shift+Space"
+                print_info "Full documentation: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
+            else
+                print_info "Skipping dropdown terminal setup"
+                print_info "You can set it up later using: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
+            fi
+            ;;
+
+        linux)
+            echo ""
+            print_info "Dropdown terminal can be configured for your window manager"
+
+            # Detect window manager
+            if [ ! -z "$XDG_CURRENT_DESKTOP" ]; then
+                print_info "Detected desktop: $XDG_CURRENT_DESKTOP"
+            fi
+
+            # Check for Hyprland
+            if command_exists hyprctl || [ "$XDG_CURRENT_DESKTOP" = "Hyprland" ]; then
+                print_info "Hyprland detected!"
+                echo ""
+                read -p "Do you want to set up dropdown terminal for Hyprland? [y/N] " -n 1 -r
+                echo ""
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    # Create Hyprland config directory
+                    mkdir -p "$HOME/.config/hyprland/scripts"
+
+                    # Copy dropdown config
+                    if [ ! -f "$HOME/.config/hyprland/dropdown.conf" ]; then
+                        create_symlink "$DOTFILES_DIR/.config/hyprland/dropdown.conf" "$HOME/.config/hyprland/dropdown.conf"
+                        print_success "Created Hyprland dropdown config"
+                    else
+                        print_info "Hyprland dropdown config already exists"
+                    fi
+
+                    # Copy toggle script
+                    if [ ! -f "$HOME/.config/hyprland/scripts/toggle_dropdown.sh" ]; then
+                        cp "$DOTFILES_DIR/scripts/toggle_dropdown_hyprland.sh" "$HOME/.config/hyprland/scripts/toggle_dropdown.sh"
+                        chmod +x "$HOME/.config/hyprland/scripts/toggle_dropdown.sh"
+                        print_success "Created toggle script"
+                    fi
+
+                    # Check if source line exists in hyprland.conf
+                    if [ -f "$HOME/.config/hypr/hyprland.conf" ]; then
+                        if ! grep -q "source.*hyprland/dropdown.conf" "$HOME/.config/hypr/hyprland.conf"; then
+                            echo "" >> "$HOME/.config/hypr/hyprland.conf"
+                            echo "# Dropdown terminal configuration" >> "$HOME/.config/hypr/hyprland.conf"
+                            echo "source = ~/.config/hyprland/dropdown.conf" >> "$HOME/.config/hypr/hyprland.conf"
+                            print_success "Added dropdown config to hyprland.conf"
+                        else
+                            print_info "Dropdown config already sourced in hyprland.conf"
+                        fi
+
+                        # Reload Hyprland config
+                        print_info "Reloading Hyprland config..."
+                        hyprctl reload 2>/dev/null || print_warning "Could not reload Hyprland (not running?)"
+                    else
+                        print_warning "hyprland.conf not found at ~/.config/hypr/hyprland.conf"
+                        print_info "Add this line to your config: source = ~/.config/hyprland/dropdown.conf"
+                    fi
+
+                    echo ""
+                    print_success "Hyprland dropdown terminal setup completed!"
+                    print_info "Hotkey: Super+` (grave key)"
+                    print_info "Full documentation: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
+                else
+                    print_info "Skipping Hyprland dropdown setup"
+                fi
+
+            # Check for i3
+            elif command_exists i3; then
+                print_info "i3 detected. Add to ~/.config/i3/config:"
+                echo "  bindsym \$mod+grave exec wezterm start --class dropdown"
+                echo "  for_window [class=\"dropdown\"] floating enable, resize set 100ppt 50ppt, move position 0 0"
+
+            # Check for Sway
+            elif command_exists sway; then
+                print_info "Sway detected. Add to ~/.config/sway/config:"
+                echo "  bindsym \$mod+grave exec wezterm start --class dropdown"
+                echo "  for_window [app_id=\"dropdown\"] floating enable, resize set 100ppt 50ppt, move position 0 0"
+
+            # Other WMs
+            else
+                print_info "For other window managers, see: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
+            fi
+            ;;
+    esac
+
+    echo ""
+}
+
 # ====== Post-installation ======
 
 post_install() {
@@ -310,6 +487,11 @@ main() {
     # Post-installation
     post_install
 
+    # Setup dropdown terminal (optional)
+    if command_exists wezterm || [ "$OS" = "macos" ]; then
+        setup_dropdown_terminal
+    fi
+
     echo ""
     echo "======================================"
     print_success "Installation completed!"
@@ -318,6 +500,10 @@ main() {
     print_info "Next steps:"
     echo "  1. Restart your terminal or run: source ~/.zshrc"
     echo "  2. If using WezTerm, restart it to apply configs"
+
+    if [ "$OS" = "macos" ]; then
+        echo "  3. For dropdown terminal: Press Cmd+Shift+Space"
+    fi
 
     if [ -d "$BACKUP_DIR" ]; then
         echo ""
