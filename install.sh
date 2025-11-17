@@ -388,7 +388,7 @@ EOF
 
                     echo ""
                     print_success "Hyprland dropdown terminal setup completed!"
-                    print_info "Hotkey: Super+` (grave key)"
+                    print_info 'Hotkey: Super+` (grave key)'
                     print_info "Full documentation: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
                 else
                     print_info "Skipping Hyprland dropdown setup"
