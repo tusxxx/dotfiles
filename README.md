@@ -1,6 +1,6 @@
 # Dotfiles
 
-Personal configuration files for MacOS development environment.
+Personal configuration files for macOS and Linux development environments.
 
 ## Contents
 
@@ -8,27 +8,68 @@ Personal configuration files for MacOS development environment.
 - **[.config/starship.toml](#starship)** - Starship prompt configuration
 - **[.wezterm.lua](#wezterm)** - WezTerm terminal emulator configuration
 
+## Supported OS
+
+- **macOS** - Full support with Homebrew
+- **Linux** - Ubuntu, Debian, Fedora, RHEL, Arch, Manjaro
+- **Windows** - Limited support (manual installation required)
+
 ## Requirements
 
-- macOS (tested on latest versions)
+### macOS
 - [Homebrew](https://brew.sh/)
-- [Starship](https://starship.rs/) - `brew install starship`
-- [WezTerm](https://wezfurlong.org/wezterm/) - `brew install --cask wezterm`
 - Zsh (default shell on macOS)
 
-### Optional
+### Linux
+- Zsh
+- Package manager (apt, dnf, or pacman)
 
-- [fzf](https://github.com/junegunn/fzf) - fuzzy finder
-- Nerd Font for icons (e.g., [FiraCode Nerd Font](https://www.nerdfonts.com/))
+### All Platforms
+- [Starship](https://starship.rs/) - Cross-platform prompt
+- [WezTerm](https://wezfurlong.org/wezterm/) - Terminal emulator (optional)
+- [fzf](https://github.com/junegunn/fzf) - Fuzzy finder (optional)
+- Nerd Font for icons - e.g., [FiraCode Nerd Font](https://www.nerdfonts.com/) (optional)
 
 ## Installation
 
-### Quick Setup
+### Automated Installation (Recommended)
+
+The install script automatically detects your OS and installs everything:
 
 ```bash
 # Clone repository
 git clone https://github.com/tusxxx/dotfiles.git ~/dotfiles
 cd ~/dotfiles
+
+# Run installation script
+./install.sh
+```
+
+**What it does:**
+- Detects your OS (macOS, Linux distro, or Windows)
+- Installs required packages (Starship, fzf, WezTerm, Nerd Font)
+- Creates backups of existing configs
+- Creates symlinks to dotfiles
+- Sets up fzf key bindings
+- Changes default shell to zsh (if needed)
+
+### Manual Installation
+
+If you prefer manual setup or want to install specific configs only:
+
+```bash
+# Clone repository
+git clone https://github.com/tusxxx/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+
+# Install required tools manually
+# macOS:
+brew install starship fzf
+brew install --cask wezterm font-fira-code-nerd-font
+
+# Ubuntu/Debian:
+curl -sS https://starship.rs/install.sh | sh
+sudo apt-get install fzf
 
 # Create symlinks
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
@@ -38,17 +79,6 @@ ln -sf ~/dotfiles/.config/starship.toml ~/.config/starship.toml
 
 # Reload shell
 source ~/.zshrc
-```
-
-### Manual Setup
-
-You can also copy individual files instead of symlinking:
-
-```bash
-cp ~/dotfiles/.zshrc ~/.zshrc
-cp ~/dotfiles/.wezterm.lua ~/.wezterm.lua
-mkdir -p ~/.config
-cp ~/dotfiles/.config/starship.toml ~/.config/starship.toml
 ```
 
 ## Configuration Details
@@ -115,6 +145,7 @@ dotfiles/
 │   └── starship.toml    # Starship prompt config
 ├── .wezterm.lua         # WezTerm terminal config
 ├── .zshrc               # Zsh shell config
+├── install.sh           # Automated installation script
 ├── CLAUDE.md            # Claude AI project guidelines
 └── README.md            # This file
 ```
