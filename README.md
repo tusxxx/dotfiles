@@ -113,7 +113,14 @@ source ~/.zshrc
 
 ### WezTerm
 
-`.wezterm.lua` provides terminal emulator configuration.
+`.wezterm.lua` provides terminal emulator configuration with:
+
+- Cross-platform support (macOS, Linux, Windows)
+- Tokyo Night color scheme
+- Custom font settings with ligatures
+- Transparency and blur effects
+- Tab and pane management
+- **Dropdown terminal support** (Quake-mode)
 
 ## Customization
 
@@ -142,12 +149,45 @@ source ~/.zshrc  # reload shell config
 ```
 dotfiles/
 ├── .config/
-│   └── starship.toml    # Starship prompt config
-├── .wezterm.lua         # WezTerm terminal config
-├── .zshrc               # Zsh shell config
-├── install.sh           # Automated installation script
-├── CLAUDE.md            # Claude AI project guidelines
-└── README.md            # This file
+│   └── starship.toml           # Starship prompt config
+├── docs/
+│   └── DROPDOWN_TERMINAL.md    # Dropdown terminal setup guide
+├── scripts/
+│   └── toggle_dropdown.sh      # macOS dropdown toggle script
+├── .wezterm.lua                # WezTerm terminal config
+├── .zshrc                      # Zsh shell config
+├── install.sh                  # Automated installation script
+├── CLAUDE.md                   # Claude AI project guidelines
+└── README.md                   # This file
+```
+
+## Advanced Features
+
+### Dropdown Terminal (Quake-mode)
+
+WezTerm can be configured as a dropdown terminal that appears on half-screen with a hotkey.
+
+**macOS Setup (Hammerspoon):**
+
+1. Install Hammerspoon:
+   ```bash
+   brew install --cask hammerspoon
+   ```
+
+2. Add to `~/.hammerspoon/init.lua`:
+   ```lua
+   -- See full config in docs/DROPDOWN_TERMINAL.md
+   hs.hotkey.bind({"cmd", "shift"}, "space", function()
+       -- Toggle WezTerm dropdown
+   end)
+   ```
+
+3. See detailed guide: [docs/DROPDOWN_TERMINAL.md](docs/DROPDOWN_TERMINAL.md)
+
+**Linux Setup (i3/sway):**
+```
+bindsym $mod+grave exec wezterm start --class dropdown
+for_window [app_id="dropdown"] floating enable, resize set 100ppt 50ppt
 ```
 
 ## Tips
