@@ -52,6 +52,7 @@ cd ~/dotfiles
 - Creates symlinks to dotfiles
 - Sets up fzf key bindings
 - Changes default shell to zsh (if needed)
+- **Optionally configures dropdown terminal** (Hammerspoon on macOS)
 
 ### Manual Installation
 
