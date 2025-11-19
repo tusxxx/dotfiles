@@ -17,6 +17,14 @@ NC='\033[0m' # No Color
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="$HOME/.dotfiles_backup_$(date +%Y%m%d_%H%M%S)"
 
+# Installation flags
+INSTALL_ZSH=false
+INSTALL_WEZTERM=false
+INSTALL_STARSHIP=false
+INSTALL_SKETCHYBAR=false
+INSTALL_YABAI=false
+INSTALL_DROPDOWN=false
+
 # ====== Helper Functions ======
 
 print_info() {
@@ -40,22 +48,13 @@ detect_os() {
     case "$(uname -s)" in
         Darwin*)
             OS="macos"
-            print_info "Detected: macOS"
             ;;
         Linux*)
             OS="linux"
-            print_info "Detected: Linux"
-
-            # Detect Linux distribution
             if [ -f /etc/os-release ]; then
                 . /etc/os-release
                 DISTRO=$ID
-                print_info "Distribution: $DISTRO"
             fi
-            ;;
-        CYGWIN*|MINGW*|MSYS*)
-            OS="windows"
-            print_info "Detected: Windows"
             ;;
         *)
             OS="unknown"
@@ -100,13 +99,11 @@ create_symlink() {
 
 # ====== Installation Functions ======
 
-# Install Homebrew (macOS)
 install_homebrew() {
     if ! command_exists brew; then
         print_info "Installing Homebrew..."
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-        # Add Homebrew to PATH for Apple Silicon
         if [[ $(uname -m) == 'arm64' ]]; then
             echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
             eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -118,328 +115,52 @@ install_homebrew() {
     fi
 }
 
-# Install packages for macOS
-install_macos_packages() {
-    print_info "Installing macOS packages..."
+install_package_macos() {
+    local package=$1
+    local tap=$2
 
-    install_homebrew
-
-    # Update Homebrew
-    brew update
-
-    # Install packages
-    local packages=(
-        "starship"
-        "fzf"
-    )
-
-    for package in "${packages[@]}"; do
-        if brew list "$package" &>/dev/null; then
-            print_info "$package already installed"
-        else
-            print_info "Installing $package..."
-            brew install "$package"
-        fi
-    done
-
-    # Install cask packages
-    local casks=(
-        "wezterm"
-        "font-fira-code-nerd-font"
-    )
-
-    for cask in "${casks[@]}"; do
-        if brew list --cask "$cask" &>/dev/null; then
-            print_info "$cask already installed"
-        else
-            print_info "Installing $cask..."
-            brew install --cask "$cask"
-        fi
-    done
-
-    print_success "macOS packages installed"
-}
-
-# Install packages for Linux
-install_linux_packages() {
-    print_info "Installing Linux packages..."
-
-    case "$DISTRO" in
-        ubuntu|debian)
-            sudo apt-get update
-
-            # Install Starship
-            if ! command_exists starship; then
-                curl -sS https://starship.rs/install.sh | sh -s -- -y
-            fi
-
-            # Install fzf
-            if ! command_exists fzf; then
-                sudo apt-get install -y fzf
-            fi
-
-            print_success "Ubuntu/Debian packages installed"
-            ;;
-
-        fedora|rhel|centos)
-            sudo dnf check-update || true
-
-            # Install Starship
-            if ! command_exists starship; then
-                curl -sS https://starship.rs/install.sh | sh -s -- -y
-            fi
-
-            # Install fzf
-            if ! command_exists fzf; then
-                sudo dnf install -y fzf
-            fi
-
-            print_success "Fedora/RHEL packages installed"
-            ;;
-
-        arch|manjaro)
-            sudo pacman -Sy
-
-            # Install packages
-            sudo pacman -S --noconfirm --needed starship fzf
-
-            print_success "Arch packages installed"
-            ;;
-
-        *)
-            print_warning "Unsupported Linux distribution: $DISTRO"
-            print_info "Please install starship and fzf manually"
-            print_info "Starship: curl -sS https://starship.rs/install.sh | sh"
-            ;;
-    esac
-}
-
-# ====== Link Configuration Files ======
-
-link_configs() {
-    print_info "Linking configuration files..."
-
-    # Common configs (all OS)
-    create_symlink "$DOTFILES_DIR/.zshrc" "$HOME/.zshrc"
-    create_symlink "$DOTFILES_DIR/.config/starship.toml" "$HOME/.config/starship.toml"
-
-    # OS-specific configs
-    case "$OS" in
-        macos)
-            create_symlink "$DOTFILES_DIR/.wezterm.lua" "$HOME/.wezterm.lua"
-            ;;
-        linux)
-            # WezTerm also works on Linux
-            if command_exists wezterm; then
-                create_symlink "$DOTFILES_DIR/.wezterm.lua" "$HOME/.wezterm.lua"
-            fi
-            ;;
-    esac
-
-    print_success "Configuration files linked"
-}
-
-# ====== Dropdown Terminal Setup ======
-
-setup_dropdown_terminal() {
-    print_info "Setting up dropdown terminal (optional)..."
-
-    case "$OS" in
-        macos)
-            echo ""
-            read -p "Do you want to set up dropdown terminal (Quake-mode)? [y/N] " -n 1 -r
-            echo ""
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                # Install Hammerspoon if not installed
-                if ! brew list --cask hammerspoon &>/dev/null; then
-                    print_info "Installing Hammerspoon for dropdown terminal support..."
-                    brew install --cask hammerspoon
-                fi
-
-                # Create Hammerspoon config directory
-                mkdir -p "$HOME/.hammerspoon"
-
-                # Create or append to Hammerspoon config
-                if [ ! -f "$HOME/.hammerspoon/init.lua" ]; then
-                    print_info "Creating Hammerspoon configuration..."
-                    cat > "$HOME/.hammerspoon/init.lua" <<'EOF'
--- ========================================
--- Hammerspoon Configuration
--- ========================================
-
--- Dropdown WezTerm Terminal
-local wezterm = nil
-local weztermBundleID = "com.github.wez.wezterm"
-
--- Hotkey: Cmd+Shift+Space
-hs.hotkey.bind({"cmd", "shift"}, "space", function()
-    if wezterm == nil or not wezterm:isRunning() then
-        -- Launch WezTerm in dropdown mode
-        wezterm = hs.application.open(weztermBundleID, 1, true)
-        hs.timer.doAfter(0.3, function()
-            local win = wezterm:mainWindow()
-            if win then
-                local screen = hs.screen.mainScreen()
-                local frame = screen:frame()
-                -- Position: full width, 50% height, top of screen
-                win:setFrame({
-                    x = frame.x,
-                    y = frame.y,
-                    w = frame.w,
-                    h = frame.h * 0.5
-                })
-            end
-        end)
-    else
-        local win = wezterm:mainWindow()
-        if win and win:isVisible() then
-            -- Hide
-            wezterm:hide()
-        else
-            -- Show and focus
-            wezterm:activate()
-            local win = wezterm:mainWindow()
-            if win then
-                win:focus()
-            end
-        end
-    end
-end)
-
--- Auto-reload config on changes
-hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", function(files)
-    hs.reload()
-end):start()
-
-hs.alert.show("Hammerspoon Config Loaded")
-EOF
-                    print_success "Hammerspoon config created at ~/.hammerspoon/init.lua"
-                else
-                    print_info "Hammerspoon config already exists at ~/.hammerspoon/init.lua"
-                    print_info "Add dropdown terminal config from: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
-                fi
-
-                # Open Hammerspoon
-                print_info "Opening Hammerspoon..."
-                open -a Hammerspoon
-
-                echo ""
-                print_success "Dropdown terminal setup completed!"
-                print_info "Hotkey: Cmd+Shift+Space"
-                print_info "Full documentation: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
-            else
-                print_info "Skipping dropdown terminal setup"
-                print_info "You can set it up later using: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
-            fi
-            ;;
-
-        linux)
-            echo ""
-            print_info "Dropdown terminal can be configured for your window manager"
-
-            # Detect window manager
-            if [ ! -z "$XDG_CURRENT_DESKTOP" ]; then
-                print_info "Detected desktop: $XDG_CURRENT_DESKTOP"
-            fi
-
-            # Check for Hyprland
-            if command_exists hyprctl || [ "$XDG_CURRENT_DESKTOP" = "Hyprland" ]; then
-                print_info "Hyprland detected!"
-                echo ""
-                read -p "Do you want to set up dropdown terminal for Hyprland? [y/N] " -n 1 -r
-                echo ""
-                if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    # Create Hyprland config directory
-                    mkdir -p "$HOME/.config/hyprland/scripts"
-
-                    # Copy dropdown config
-                    if [ ! -f "$HOME/.config/hyprland/dropdown.conf" ]; then
-                        create_symlink "$DOTFILES_DIR/.config/hyprland/dropdown.conf" "$HOME/.config/hyprland/dropdown.conf"
-                        print_success "Created Hyprland dropdown config"
-                    else
-                        print_info "Hyprland dropdown config already exists"
-                    fi
-
-                    # Copy toggle script
-                    if [ ! -f "$HOME/.config/hyprland/scripts/toggle_dropdown.sh" ]; then
-                        cp "$DOTFILES_DIR/scripts/toggle_dropdown_hyprland.sh" "$HOME/.config/hyprland/scripts/toggle_dropdown.sh"
-                        chmod +x "$HOME/.config/hyprland/scripts/toggle_dropdown.sh"
-                        print_success "Created toggle script"
-                    fi
-
-                    # Check if source line exists in hyprland.conf
-                    if [ -f "$HOME/.config/hypr/hyprland.conf" ]; then
-                        if ! grep -q "source.*hyprland/dropdown.conf" "$HOME/.config/hypr/hyprland.conf"; then
-                            echo "" >> "$HOME/.config/hypr/hyprland.conf"
-                            echo "# Dropdown terminal configuration" >> "$HOME/.config/hypr/hyprland.conf"
-                            echo "source = ~/.config/hyprland/dropdown.conf" >> "$HOME/.config/hypr/hyprland.conf"
-                            print_success "Added dropdown config to hyprland.conf"
-                        else
-                            print_info "Dropdown config already sourced in hyprland.conf"
-                        fi
-
-                        # Reload Hyprland config
-                        print_info "Reloading Hyprland config..."
-                        hyprctl reload 2>/dev/null || print_warning "Could not reload Hyprland (not running?)"
-                    else
-                        print_warning "hyprland.conf not found at ~/.config/hypr/hyprland.conf"
-                        print_info "Add this line to your config: source = ~/.config/hyprland/dropdown.conf"
-                    fi
-
-                    echo ""
-                    print_success "Hyprland dropdown terminal setup completed!"
-                    print_info 'Hotkey: Super+` (grave key)'
-                    print_info "Full documentation: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
-                else
-                    print_info "Skipping Hyprland dropdown setup"
-                fi
-
-            # Check for i3
-            elif command_exists i3; then
-                print_info "i3 detected. Add to ~/.config/i3/config:"
-                echo "  bindsym \$mod+grave exec wezterm start --class dropdown"
-                echo "  for_window [class=\"dropdown\"] floating enable, resize set 100ppt 50ppt, move position 0 0"
-
-            # Check for Sway
-            elif command_exists sway; then
-                print_info "Sway detected. Add to ~/.config/sway/config:"
-                echo "  bindsym \$mod+grave exec wezterm start --class dropdown"
-                echo "  for_window [app_id=\"dropdown\"] floating enable, resize set 100ppt 50ppt, move position 0 0"
-
-            # Other WMs
-            else
-                print_info "For other window managers, see: $DOTFILES_DIR/docs/DROPDOWN_TERMINAL.md"
-            fi
-            ;;
-    esac
-
-    echo ""
-}
-
-# ====== Post-installation ======
-
-post_install() {
-    print_info "Running post-installation steps..."
-
-    # Setup fzf if installed
-    if command_exists fzf; then
-        case "$OS" in
-            macos)
-                if [ -f /opt/homebrew/opt/fzf/install ]; then
-                    /opt/homebrew/opt/fzf/install --key-bindings --completion --no-update-rc
-                elif [ -f /usr/local/opt/fzf/install ]; then
-                    /usr/local/opt/fzf/install --key-bindings --completion --no-update-rc
-                fi
-                ;;
-            linux)
-                if [ -f /usr/share/doc/fzf/examples/key-bindings.zsh ]; then
-                    echo "source /usr/share/doc/fzf/examples/key-bindings.zsh" >> ~/.zshrc.local
-                fi
-                ;;
-        esac
+    if [ -n "$tap" ] && ! brew tap | grep -q "$tap"; then
+        brew tap "$tap"
     fi
 
-    # Change default shell to zsh if not already
+    if brew list "$package" &>/dev/null; then
+        print_info "$package already installed"
+    else
+        print_info "Installing $package..."
+        brew install "$package"
+        print_success "$package installed"
+    fi
+}
+
+install_cask_macos() {
+    local cask=$1
+
+    if brew list --cask "$cask" &>/dev/null; then
+        print_info "$cask already installed"
+    else
+        print_info "Installing $cask..."
+        brew install --cask "$cask"
+        print_success "$cask installed"
+    fi
+}
+
+install_starship_linux() {
+    if ! command_exists starship; then
+        print_info "Installing Starship..."
+        curl -sS https://starship.rs/install.sh | sh -s -- -y
+        print_success "Starship installed"
+    else
+        print_info "Starship already installed"
+    fi
+}
+
+# ====== Component Installation Functions ======
+
+setup_zsh() {
+    print_info "Setting up Zsh..."
+
+    create_symlink "$DOTFILES_DIR/.zshrc" "$HOME/.zshrc"
+
     if [ "$SHELL" != "$(which zsh)" ]; then
         print_info "Changing default shell to zsh..."
         if command_exists zsh; then
@@ -451,45 +172,322 @@ post_install() {
         fi
     fi
 
-    print_success "Post-installation completed"
+    print_success "Zsh configured"
+    echo ""
 }
 
-# ====== Main ======
+setup_wezterm() {
+    print_info "Setting up WezTerm..."
 
-main() {
+    case "$OS" in
+        macos)
+            install_cask_macos "wezterm"
+            ;;
+        linux)
+            if ! command_exists wezterm; then
+                print_warning "WezTerm not found. Install manually from: https://wezfurlong.org/wezterm/"
+            fi
+            ;;
+    esac
+
+    create_symlink "$DOTFILES_DIR/.wezterm.lua" "$HOME/.wezterm.lua"
+    print_success "WezTerm configured"
+    echo ""
+}
+
+setup_starship() {
+    print_info "Setting up Starship..."
+
+    case "$OS" in
+        macos)
+            install_homebrew
+            install_package_macos "starship"
+            ;;
+        linux)
+            install_starship_linux
+            ;;
+    esac
+
+    create_symlink "$DOTFILES_DIR/.config/starship.toml" "$HOME/.config/starship.toml"
+    print_success "Starship configured"
+    echo ""
+}
+
+setup_sketchybar() {
+    if [ "$OS" != "macos" ]; then
+        print_warning "SketchyBar is macOS only"
+        return
+    fi
+
+    print_info "Setting up SketchyBar..."
+
+    install_homebrew
+    install_package_macos "sketchybar" "FelixKratz/formulae"
+    install_cask_macos "font-fira-code-nerd-font"
+
+    create_symlink "$DOTFILES_DIR/.config/sketchybar" "$HOME/.config/sketchybar"
+
+    print_info "Starting SketchyBar..."
+    brew services start sketchybar 2>/dev/null || sketchybar --reload 2>/dev/null || true
+
+    print_success "SketchyBar configured and started"
+    echo ""
+}
+
+setup_yabai() {
+    if [ "$OS" != "macos" ]; then
+        print_warning "Yabai is macOS only"
+        return
+    fi
+
+    print_info "Setting up Yabai and skhd..."
+
+    install_homebrew
+    install_package_macos "koekeishiya/formulae/yabai"
+    install_package_macos "koekeishiya/formulae/skhd"
+
+    create_symlink "$DOTFILES_DIR/.config/yabai" "$HOME/.config/yabai"
+    create_symlink "$DOTFILES_DIR/.config/skhd" "$HOME/.config/skhd"
+
+    echo ""
+    print_warning "IMPORTANT: Yabai requires additional setup for full functionality"
+    print_info "1. Disable System Integrity Protection (SIP) for window management"
+    print_info "2. Install scripting addition: sudo yabai --install-sa"
+    print_info "3. Grant Accessibility permissions in System Settings"
+    print_info "4. See: https://github.com/koekeishiya/yabai/wiki/Installing-yabai-(latest-release)"
+    echo ""
+
+    read -p "Start yabai and skhd services now? [Y/n] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        brew services start yabai
+        brew services start skhd
+        print_success "Yabai and skhd services started"
+    fi
+
+    print_success "Yabai and skhd configured"
+    echo ""
+}
+
+setup_dropdown_terminal() {
+    print_info "Setting up dropdown terminal..."
+
+    case "$OS" in
+        macos)
+            if ! brew list --cask hammerspoon &>/dev/null; then
+                print_info "Installing Hammerspoon..."
+                brew install --cask hammerspoon
+            fi
+
+            mkdir -p "$HOME/.hammerspoon"
+
+            if [ ! -f "$HOME/.hammerspoon/init.lua" ]; then
+                cat > "$HOME/.hammerspoon/init.lua" <<'EOF'
+-- ========================================
+-- Hammerspoon Configuration
+-- ========================================
+
+-- Dropdown WezTerm Terminal
+local wezterm = nil
+local weztermBundleID = "com.github.wez.wezterm"
+
+-- Hotkey: Cmd+Shift+Space
+hs.hotkey.bind({"cmd", "shift"}, "space", function()
+    if wezterm == nil or not wezterm:isRunning() then
+        wezterm = hs.application.open(weztermBundleID, 1, true)
+        hs.timer.doAfter(0.3, function()
+            local win = wezterm:mainWindow()
+            if win then
+                local screen = hs.screen.mainScreen()
+                local frame = screen:frame()
+                win:setFrame({
+                    x = frame.x,
+                    y = frame.y,
+                    w = frame.w,
+                    h = frame.h * 0.5
+                })
+            end
+        end)
+    else
+        local win = wezterm:mainWindow()
+        if win and win:isVisible() then
+            wezterm:hide()
+        else
+            wezterm:activate()
+            local win = wezterm:mainWindow()
+            if win then
+                win:focus()
+            end
+        end
+    end
+end)
+
+hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", function(files)
+    hs.reload()
+end):start()
+
+hs.alert.show("Hammerspoon Config Loaded")
+EOF
+                print_success "Hammerspoon config created"
+            else
+                print_info "Hammerspoon config already exists"
+            fi
+
+            open -a Hammerspoon 2>/dev/null || true
+            print_success "Dropdown terminal configured (Cmd+Shift+Space)"
+            ;;
+
+        linux)
+            if command_exists hyprctl || [ "$XDG_CURRENT_DESKTOP" = "Hyprland" ]; then
+                mkdir -p "$HOME/.config/hyprland/scripts"
+
+                create_symlink "$DOTFILES_DIR/.config/hyprland/dropdown.conf" "$HOME/.config/hyprland/dropdown.conf"
+
+                if [ -f "$DOTFILES_DIR/scripts/toggle_dropdown_hyprland.sh" ]; then
+                    cp "$DOTFILES_DIR/scripts/toggle_dropdown_hyprland.sh" "$HOME/.config/hyprland/scripts/toggle_dropdown.sh"
+                    chmod +x "$HOME/.config/hyprland/scripts/toggle_dropdown.sh"
+                fi
+
+                if [ -f "$HOME/.config/hypr/hyprland.conf" ]; then
+                    if ! grep -q "source.*hyprland/dropdown.conf" "$HOME/.config/hypr/hyprland.conf"; then
+                        echo "" >> "$HOME/.config/hypr/hyprland.conf"
+                        echo "source = ~/.config/hyprland/dropdown.conf" >> "$HOME/.config/hypr/hyprland.conf"
+                        hyprctl reload 2>/dev/null || true
+                    fi
+                fi
+
+                print_success "Hyprland dropdown terminal configured (Super+\`)"
+            else
+                print_info "For dropdown terminal setup on other WMs, see docs/DROPDOWN_TERMINAL.md"
+            fi
+            ;;
+    esac
+
+    echo ""
+}
+
+# ====== Interactive Menu ======
+
+show_menu() {
     echo ""
     echo "======================================"
     echo "  Dotfiles Installation"
     echo "======================================"
     echo ""
+    echo "Detected OS: $OS"
+    echo ""
+    echo "Select components to install:"
+    echo ""
+    echo "  1) Zsh configuration"
+    echo "  2) WezTerm terminal"
+    echo "  3) Starship prompt"
 
-    detect_os
+    if [ "$OS" = "macos" ]; then
+        echo "  4) SketchyBar (macOS status bar)"
+        echo "  5) Yabai + skhd (window manager)"
+    fi
 
-    # Install packages based on OS
-    case "$OS" in
-        macos)
-            install_macos_packages
+    echo "  6) Dropdown terminal (Quake-mode)"
+    echo ""
+    echo "  a) Install all components"
+    echo "  c) Continue with selected components"
+    echo "  q) Quit"
+    echo ""
+}
+
+toggle_component() {
+    case $1 in
+        1) INSTALL_ZSH=true ;;
+        2) INSTALL_WEZTERM=true ;;
+        3) INSTALL_STARSHIP=true ;;
+        4)
+            if [ "$OS" = "macos" ]; then
+                INSTALL_SKETCHYBAR=true
+            fi
             ;;
-        linux)
-            install_linux_packages
+        5)
+            if [ "$OS" = "macos" ]; then
+                INSTALL_YABAI=true
+            fi
             ;;
-        windows)
-            print_warning "Windows detected. Limited support."
-            print_info "Please install required tools manually:"
-            print_info "  - Starship: https://starship.rs/"
-            print_info "  - WezTerm: https://wezfurlong.org/wezterm/"
+        6) INSTALL_DROPDOWN=true ;;
+        a|A)
+            INSTALL_ZSH=true
+            INSTALL_WEZTERM=true
+            INSTALL_STARSHIP=true
+            if [ "$OS" = "macos" ]; then
+                INSTALL_SKETCHYBAR=true
+                INSTALL_YABAI=true
+            fi
+            INSTALL_DROPDOWN=true
+            return 1
+            ;;
+        c|C)
+            return 1
+            ;;
+        q|Q)
+            print_info "Installation cancelled"
+            exit 0
             ;;
     esac
+    return 0
+}
 
-    # Link configs
-    link_configs
+show_selected() {
+    echo ""
+    echo "Selected components:"
+    $INSTALL_ZSH && echo "  ✓ Zsh"
+    $INSTALL_WEZTERM && echo "  ✓ WezTerm"
+    $INSTALL_STARSHIP && echo "  ✓ Starship"
+    $INSTALL_SKETCHYBAR && [ "$OS" = "macos" ] && echo "  ✓ SketchyBar"
+    $INSTALL_YABAI && [ "$OS" = "macos" ] && echo "  ✓ Yabai + skhd"
+    $INSTALL_DROPDOWN && echo "  ✓ Dropdown terminal"
+    echo ""
+}
 
-    # Post-installation
-    post_install
+interactive_menu() {
+    while true; do
+        show_menu
+        show_selected
+        read -p "Enter choice (or 'c' to continue): " choice
 
-    # Setup dropdown terminal (optional)
-    if command_exists wezterm || [ "$OS" = "macos" ]; then
-        setup_dropdown_terminal
+        if ! toggle_component "$choice"; then
+            break
+        fi
+    done
+}
+
+# ====== Installation Process ======
+
+run_installation() {
+    echo ""
+    echo "======================================"
+    echo "  Starting Installation"
+    echo "======================================"
+    echo ""
+
+    if [ "$OS" = "macos" ]; then
+        install_homebrew
+    fi
+
+    $INSTALL_ZSH && setup_zsh
+    $INSTALL_WEZTERM && setup_wezterm
+    $INSTALL_STARSHIP && setup_starship
+    $INSTALL_SKETCHYBAR && setup_sketchybar
+    $INSTALL_YABAI && setup_yabai
+    $INSTALL_DROPDOWN && setup_dropdown_terminal
+
+    # Setup fzf if available
+    if command_exists fzf; then
+        case "$OS" in
+            macos)
+                if [ -f /opt/homebrew/opt/fzf/install ]; then
+                    /opt/homebrew/opt/fzf/install --key-bindings --completion --no-update-rc
+                elif [ -f /usr/local/opt/fzf/install ]; then
+                    /usr/local/opt/fzf/install --key-bindings --completion --no-update-rc
+                fi
+                ;;
+        esac
     fi
 
     echo ""
@@ -499,10 +497,17 @@ main() {
     echo ""
     print_info "Next steps:"
     echo "  1. Restart your terminal or run: source ~/.zshrc"
-    echo "  2. If using WezTerm, restart it to apply configs"
 
-    if [ "$OS" = "macos" ]; then
-        echo "  3. For dropdown terminal: Press Cmd+Shift+Space"
+    if $INSTALL_WEZTERM; then
+        echo "  2. Restart WezTerm to apply configs"
+    fi
+
+    if $INSTALL_DROPDOWN; then
+        if [ "$OS" = "macos" ]; then
+            echo "  3. Use Cmd+Shift+Space for dropdown terminal"
+        else
+            echo "  3. Use Super+\` for dropdown terminal (Hyprland)"
+        fi
     fi
 
     if [ -d "$BACKUP_DIR" ]; then
@@ -513,5 +518,34 @@ main() {
     echo ""
 }
 
-# Run main function
-main
+# ====== Main ======
+
+main() {
+    detect_os
+
+    # Check for --auto flag for non-interactive installation
+    if [ "$1" = "--auto" ] || [ "$1" = "-a" ]; then
+        print_info "Running automatic installation (all components)..."
+        INSTALL_ZSH=true
+        INSTALL_WEZTERM=true
+        INSTALL_STARSHIP=true
+        if [ "$OS" = "macos" ]; then
+            INSTALL_SKETCHYBAR=true
+            INSTALL_YABAI=true
+        fi
+        INSTALL_DROPDOWN=true
+    else
+        interactive_menu
+    fi
+
+    # Check if any component selected
+    if ! $INSTALL_ZSH && ! $INSTALL_WEZTERM && ! $INSTALL_STARSHIP && \
+       ! $INSTALL_SKETCHYBAR && ! $INSTALL_YABAI && ! $INSTALL_DROPDOWN; then
+        print_warning "No components selected"
+        exit 0
+    fi
+
+    run_installation
+}
+
+main "$@"
