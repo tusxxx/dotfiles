@@ -73,6 +73,8 @@ alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
 # Development
 alias python='python3'
 alias pip='pip3'
+alias oc='opencode'
+alias cl='claude'
 
 # ====== Functions ======
 # Create and enter directory
@@ -119,3 +121,6 @@ export HOMEBREW_NO_ANALYTICS=1
 
 # ====== Local Config ======
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
+
+. "$HOME/.local/bin/env"
+alias a="aider --model ollama/qwen2.5-coder:32b"
