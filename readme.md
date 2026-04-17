@@ -1,5 +1,5 @@
 # Stow
-Bro, use stow
+Bro, use stow for installing configs
 
 ```
 stow .
