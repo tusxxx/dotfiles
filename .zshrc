@@ -124,3 +124,14 @@ export HOMEBREW_NO_ANALYTICS=1
 
 . "$HOME/.local/bin/env"
 alias a="aider --model ollama/qwen2.5-coder:32b"
+
+# bun completions
+[ -s "/Users/tus/.bun/_bun" ] && source "/Users/tus/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+export SDKMAN_DIR="$HOME/.sdkman"
+[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
